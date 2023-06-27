@@ -12,7 +12,7 @@ from src.testing.discriminators.Processor import Processor
 from src.testing.discriminators.config import ProcessorConfig
 from src.utils.auxiliary_classes.PathTransformer import PathTransformer
 from src.utils.helper_functions.data_helper_functions import reweighter
-from src.utils.helper_functions.global_helper_functions import get_project_root
+from src.utils.helper_functions.global_helper_functions import get_project_root, mkdir
 from src.utils.helper_functions.test_helper_functions import get_sub_paths, get_grouped_paths
 from src.utils.helper_functions.signature_helper_functions import all_words
 
@@ -56,6 +56,7 @@ class TruncatedMMDDetector(Processor):
         self.signature_order     = self.metric_kwargs.signature_order
         self.scale_signature     = self.metric_kwargs.scale_signature
         self.sigma               = self.metric_kwargs.sigma
+        self.empty_word          = np.array([1.])
 
         if self.sigma is None:
             self.similarity_function = lambda x: x
@@ -102,8 +103,8 @@ class TruncatedMMDDetector(Processor):
             else:
                 scaler = wrapper(np.ones(len(_all_words)))
 
-            sx = iisignature.sig(wrapper(x), order)
-            sy = iisignature.sig(wrapper(y), order)
+            sx = self.calculate_signature(x, order)
+            sy = self.calculate_signature(y, order)
 
             scaled_sx = torch.vstack([torch.mul(scaler, s) for s in sx])
             scaled_sy = torch.vstack([torch.mul(scaler, s) for s in sy])
@@ -151,7 +152,9 @@ class TruncatedMMDDetector(Processor):
             pathwise_sig_order
         )
 
-        if os.path.exists(path) and not self.overwrite_prior:
+        path_exists = os.path.exists(path)
+
+        if path_exists and not self.overwrite_prior:
             mmd_scores = np.load(path, allow_pickle=True)
         else:
             mmd_scores = np.zeros(shape=(beliefs.shape[0], n_tests))
@@ -212,7 +215,7 @@ class TruncatedMMDDetector(Processor):
             for k, bank in enumerate(t_path_bank):
                 ii = np.random.randint(0, bank.shape[0], size=(mmd_paths.shape[0], n_evaluations, n_weighted_paths))
 
-                for i, paths in tqdm(enumerate(mmd_paths), position=0):
+                for i, paths in enumerate(tqdm(mmd_paths, position=0)):
                     # Eval multiple times for each atom
                     for ind in ii[i]:
                         these_paths = bank[ind]
@@ -293,3 +296,8 @@ class TruncatedMMDDetector(Processor):
             return int(2*n_steps - 1)
         else:
             return int(n_steps)
+
+    def calculate_signature(self, x, order):
+        n, _, _ = x.shape
+        sig = iisignature.sig(x, order)
+        return self.wrapper(np.c_[np.ones(n), sig])

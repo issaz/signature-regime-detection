@@ -1,5 +1,5 @@
 import os
-from typing import List, Callable
+from typing import List
 
 import numpy as np
 from tqdm import tqdm
@@ -7,10 +7,7 @@ from tqdm import tqdm
 from src.generators.Model import Model
 from src.generators.config import ModelConfig
 from src.testing import TestConfig
-from src.testing.discriminators import Processor
-from src.utils.auxiliary_classes.RegimePartitioner import RegimePartitioner
-from src.utils.helper_functions.global_helper_functions import get_project_root
-from src.utils.helper_functions.test_helper_functions import get_alphas, get_memberships
+from src.utils.helper_functions.global_helper_functions import get_project_root, mkdir
 from src.utils.helper_functions.test_helper_functions import get_sub_paths, get_grouped_paths
 
 
@@ -75,8 +72,9 @@ def get_set_paths(models: List[Model], time: float, path_bank_size: int, config:
         )
 
         data_path = get_project_root().as_posix() + this_path_args
+        path_exists = os.path.exists(data_path)
 
-        if os.path.exists(data_path) and not overwrite:
+        if path_exists and not overwrite:
             path_data[i] = np.load(data_path, allow_pickle=True)
         else:
             sim_path = model.sim_path
@@ -166,25 +164,15 @@ def alpha_score_function(regime_changes: np.ndarray, path_length: int, membershi
 
     # Extract sub paths and build true alphas path
     true_sub_paths = get_sub_paths(regime_path, n_steps, offset)
-    true_grouped_paths = get_grouped_paths(true_sub_paths, n_paths)
-    pct_true_passed = np.sum(true_grouped_paths, axis=1) / n_paths
-    pct_true_passed = pct_true_passed[:, 0]
+    true_alphas    = true_sub_paths.mean(axis=1)
 
-    true_alphas = []
-    for m in memberships:
-        true_alphas.append(np.mean(pct_true_passed[m]))
-
-    # Compare test and true alphas
-    alphas = np.array(test_alphas)
-    true_alphas = np.array(true_alphas)
-
-    regime_on_mask = np.where(true_alphas > 0.)[0]
-    regime_off_mask = np.where(true_alphas == 0)[0]
+    regime_on_mask = true_alphas > 0.
+    regime_off_mask = true_alphas == 0.
 
     # Calculate accuracy scores
-    regime_on_accuracy = 1 - np.mean(np.abs(alphas[regime_on_mask] - true_alphas[regime_on_mask]))
-    regime_off_accuracy = 1 - np.mean(np.abs(alphas[regime_off_mask] - true_alphas[regime_off_mask]))
-    total_accuracy = 1 - np.mean(np.abs(alphas - true_alphas))
+    regime_on_accuracy = 1 - np.mean(np.abs(test_alphas[regime_on_mask] - true_alphas[regime_on_mask]))
+    regime_off_accuracy = 1 - np.mean(np.abs(test_alphas[regime_off_mask] - true_alphas[regime_off_mask]))
+    total_accuracy = 1 - np.mean(np.abs(test_alphas - true_alphas))
 
     final_scores = {
         "regime_on": regime_on_accuracy,
@@ -193,89 +181,6 @@ def alpha_score_function(regime_changes: np.ndarray, path_length: int, membershi
     }
 
     return final_scores
-
-
-def n_alpha_test(tests: int, detector: Processor, regime_partitioner: RegimePartitioner, test_config: TestConfig,
-                 regime_partitioner_args: dict, model_pairs: List[Model]) -> dict:
-    """
-    TODO
-
-    :param tests:
-    :param detector:
-    :param regime_partitioner:
-    :param test_config:
-    :param regime_partitioner_args:
-    :param model_pairs:
-
-    :return:
-    """
-
-    regime_on_scores = 0
-    regime_off_scores = 0
-    total_scores = 0
-
-    n_paths = test_config.n_paths
-    n_steps = test_config.n_steps
-    offset  = test_config.offset
-    dim     = list(set((m.dim for m in model_pairs)))[0]
-    res = {}
-
-    S0 = [1. for _ in range(dim)]
-
-    for _ in range(tests):
-        regime_partitioner.generate_regime_partitions(**regime_partitioner_args)
-        test_path = regime_partitioner.generate_regime_change_path(model_pairs, S0)
-
-        sub_paths = get_sub_paths(test_path, n_steps, offset)
-        mmd_paths = get_grouped_paths(sub_paths, n_paths)
-
-        scores_array = detector.evaluate_path(test_path, evaluation="total")
-        memberships = get_memberships(mmd_paths)
-        mmd_alphas = get_alphas(memberships, scores_array[:, 1], detector.critical_value)
-
-        scores_dict = alpha_score_function(
-            regime_changes = regime_partitioner.regime_changes,
-            path_length    = len(test_path),
-            memberships    = memberships,
-            test_alphas    = mmd_alphas,
-            test_data      = [n_steps, offset, n_paths]
-        )
-
-        regime_on_scores += scores_dict.get("regime_on")
-        regime_off_scores += scores_dict.get("regime_off")
-        total_scores      += scores_dict.get("total")
-
-    res["regime_on"]  = regime_on_scores/tests
-    res["regime_off"] = regime_off_scores/tests
-    res["total"]      = total_scores/tests
-
-    return res
-
-
-def generate_mmd_histogram(beliefs: np.ndarray, metric: Callable, n_samples: int, n_paths: int) -> np.ndarray:
-    """
-    Generates a histogram of MMD scores under a given metric and beliefs
-
-    :param beliefs:     Tensor of belief paths
-    :param metric:      Metric to be used
-    :param n_samples:   Number of atoms
-    :param n_paths:     Number of paths to sim
-    :return:            Histogram scores
-    """
-
-    # Generate values
-    _, path_bank_size, _, _ = beliefs.shape
-
-    rand_ints = np.random.randint(0, path_bank_size, size=(n_samples, 2, n_paths))
-    scores = np.zeros(n_samples)
-
-    for i, randi in tqdm(enumerate(rand_ints), position=0):
-        x = beliefs[randi[0]]
-        y = beliefs[randi[1]]
-
-        scores[i] = metric(x, y)
-
-    return scores
 
 
 def get_beliefs_from_config(test_config: TestConfig, model_config: ModelConfig, overwrite=False):

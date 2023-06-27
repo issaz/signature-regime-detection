@@ -4,7 +4,6 @@ import numpy as np
 from scipy import stats
 
 
-# TODO: "Fitter" object
 class GammaFitter(object):
 
     def __init__(self, obs: Union[List, np.ndarray]):

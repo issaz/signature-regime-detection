@@ -14,20 +14,19 @@ def all_words(dim, order):
         return []
 
     def backtrack(word, letters):
-        if len(word) <= dim:
+        if len(word) <= order:
             words.append(word)
-
-        if len(word) == dim:
+        else:
             return
 
         for letter in letters:
-            if letter <= order:
+            if letter <= dim:
                 backtrack(word + str(letter), letters)
 
     words = []
-    letters = list(range(1, order + 1))
+    letters = list(range(1, dim + 1))
     backtrack("", letters)
-    return words
+    return sorted(words, key=lambda x: (len(x), x))
 
 
 def tuples_to_strings(lst):

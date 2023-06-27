@@ -140,30 +140,3 @@ def plot_path_test_threshold(sub_paths: np.ndarray, alphas: np.ndarray, path_spl
         plt.savefig(get_project_root().as_posix() + "/data/images/alpha_plots/{}.png".format(save_image[1]), dpi=300)
 
     plt.show()
-
-
-def plot_mmd_histogram(scores: np.ndarray, bins=20, color="dodgerblue", line_color="tomato", alpha=0.8, line_alpha=0.7,
-                       c_alpha=0.95) -> None:
-    """
-    Plots histogram of scores with given arguments
-
-    :param scores:      Vector of scores to plot
-    :param bins:        Number of bins
-    :param color:       Color of the histogram
-    :param line_color:  Line color of the c_alpha line
-    :param alpha:       Shading of the histogram
-    :param line_alpha:  Shading of the line
-    :param c_alpha:     Level to plot line
-    :return:
-    """
-
-    ca = sorted(scores)[int(c_alpha*len(scores))]
-
-    plt.figure(figsize=golden_dimensions(10))
-    plt.hist(scores, bins=bins, color=color, alpha=alpha, density=True)
-    plt.axvline(ca, color=line_color, alpha=line_alpha, label="{:2f}% level".format(c_alpha*100))
-    plt.grid(b=True, color='grey', linestyle=':', linewidth=1.0, alpha=0.3)
-    plt.minorticks_on()
-    plt.grid(b=True, which='minor', color='grey', linestyle=':', linewidth=1.0, alpha=0.1)
-    plt.legend()
-    plt.show()

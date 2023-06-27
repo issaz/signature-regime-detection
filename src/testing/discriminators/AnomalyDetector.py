@@ -10,7 +10,7 @@ from src.testing import TestConfig
 from src.testing.discriminators.Processor import Processor
 from src.testing.discriminators.config import ProcessorConfig
 from src.utils.auxiliary_classes.PathTransformer import PathTransformer
-from src.utils.helper_functions.global_helper_functions import get_project_root
+from src.utils.helper_functions.global_helper_functions import get_project_root, mkdir
 from src.utils.helper_functions.signature_helper_functions import shuffle_product, tuples_to_strings, all_words
 from src.utils.helper_functions.test_helper_functions import get_sub_paths
 
@@ -54,7 +54,6 @@ class AnomalyDetector(Processor):
         self.transformed_paths    = self.transform_path_bank()[0]  # Only ever assume one set of beliefs
 
         # Class specific objects
-        self.signature_func       = getattr(iisignature, "sig")
         self.D1                   = None
         self.D2                   = None
         self.A                    = None
@@ -105,7 +104,7 @@ class AnomalyDetector(Processor):
         pt_args = self.path_transformer.transformations.items()
 
         data_path = get_project_root().as_posix() + "/data/anomaly_scores/{}_d_{}_s_{}_l_{}_t_{}_o_{}_logsig_{}.npy".format(
-            self.path_details,
+            self.path_details[0],
             self.beliefs.shape[-1] - 1,
             int(self.pct_path_bank*self.beliefs.shape[0]),
             self.n_steps,
@@ -114,7 +113,9 @@ class AnomalyDetector(Processor):
             self.signature_type == "log_signature"
         )
 
-        if os.path.exists(data_path) and not self.overwrite_prior:
+        path_exists = os.path.exists(data_path)
+
+        if path_exists and not self.overwrite_prior:
             distribution = np.load(data_path, allow_pickle=True)
         else:
             distribution = np.array([self.metric(path) for path in tqdm(self.D2, position=0, leave=True)])
@@ -175,7 +176,7 @@ class AnomalyDetector(Processor):
         :return:        n x l x 1+d+d^2+... tensor of corpus signatures, where d is the dimension of the paths
         """
 
-        corpus_signatures = self.signature_func(self.wrapper(paths), int(scale*self.signature_depth))
+        corpus_signatures = self.calculate_signature(paths, int(scale*self.signature_depth))
 
         return corpus_signatures
 
@@ -187,19 +188,18 @@ class AnomalyDetector(Processor):
 
         dim                = self.beliefs.shape[-1]
         order              = self.signature_depth
-        log_signature      = self.signature_type == "log_signature"
         num_terms          = int((np.power(dim, order + 1)-1)/(dim - 1)) - 1
         expected_signature = torch.mean(self.corpus_signatures_2N, 0, dtype=torch.float64)
 
         input_words = all_words(dim, 2*order)
-        words       = tuples_to_strings(input_words)
+        words       = tuples_to_strings(input_words)[1:]
 
         # Generate matrix A
         shuffles = self.wrapper(
             [[shuffle_product(i, j, words) for i in range(num_terms)] for j in range(num_terms)]
         )
 
-        self.A = self.wrapper(torch.einsum("ijp,p->ij", shuffles, expected_signature))
+        self.A    = torch.einsum("ijp,p->ij", shuffles, expected_signature)
         self.invA = torch.inverse(self.A)
 
     def variance_norm(self, w: torch.Tensor) -> float:
@@ -223,15 +223,15 @@ class AnomalyDetector(Processor):
         """
 
         variance_norm  = self.variance_norm
-        path_signature = self.signature_func(self.wrapper([path]), self.signature_depth)
+        path_signature = self.calculate_signature(np.expand_dims(path, 0), self.signature_depth)
         conformance = 0
-
-        # with Parallel(n_jobs=2) as parallel:
-        #    scores = parallel(delayed(variance_norm)(path_signature-sig) for sig in self.corpus_signatures)
-        #    conformance = max(scores)
 
         for sig in self.corpus_signatures:
             this_score = variance_norm(path_signature - sig)
             conformance = max([conformance, this_score])
 
         return conformance
+
+    def calculate_signature(self, x, order):
+        sig = iisignature.sig(x, order)
+        return self.wrapper(sig)

@@ -11,7 +11,7 @@ from src.testing.discriminators.Processor import Processor
 from src.testing.discriminators.config import ProcessorConfig
 from src.utils.auxiliary_classes.PathTransformer import PathTransformer
 from src.utils.helper_functions.data_helper_functions import reweighter
-from src.utils.helper_functions.global_helper_functions import get_project_root
+from src.utils.helper_functions.global_helper_functions import get_project_root, mkdir
 from src.utils.helper_functions.test_helper_functions import get_sub_paths, get_grouped_paths
 
 
@@ -117,7 +117,7 @@ class GeneralMMDDetector(Processor):
             # Define the metric (method) for scoring
             if metric_type == "mmd":
                 def metric(x, y): return signature_kernel.compute_mmd(wrapper(x), wrapper(y), order=1)
-                print(f"Metric initialized. MMD1, kernel = {kernel_type}, dyadic_order = {dyadic_orders[0]}")
+                print(f"Metric initialized. MMD1, sigma={sigmas[0]}, kernel = {kernel_type}, dyadic_order = {dyadic_orders[0]}")
             else:
                 def metric(x, y):
                     X = wrapper(x)
@@ -154,14 +154,12 @@ class GeneralMMDDetector(Processor):
         # Number of paths to generate from, changes if there are weights
         n_paths = len(self.weights)
 
-        #_, path_bank_size, _, _ = paths.shape
-
         if len(self.sigmas) > 1:
-            metric_type = "mmd1"
+            metric_type = "mmd2"
         elif self.metric_type == "scoring":
             metric_type = "scoring"
         else:
-            metric_type = "mmd0"
+            metric_type = "mmd1"
 
         path_ = get_project_root().as_posix() + "/data/mmd_scores/{}_{}_d_{}_p_{}_l_{}_t_{}_s_{}_{}_ps_{}_le_{}.npy".format(
             metric_type,
@@ -176,7 +174,9 @@ class GeneralMMDDetector(Processor):
             pathwise_sig_order
         )
 
-        if os.path.exists(path_) and not self.overwrite_prior:
+        path_exists = os.path.exists(path_)
+
+        if path_exists and not self.overwrite_prior:
             metric_scores = np.load(path_, allow_pickle=True)
         else:
             metric_scores = np.zeros(shape=(beliefs.shape[0], n_tests))

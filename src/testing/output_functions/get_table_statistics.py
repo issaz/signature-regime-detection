@@ -7,9 +7,9 @@ from sklearn.metrics import roc_auc_score
 from src.generators.Model import Model
 from src.testing import TestConfig
 from src.testing.discriminators import Processor
-from src.testing.experiment_functions.mmd_test_functions import get_sub_paths, get_grouped_paths, get_memberships, \
-    generate_regime_path
+from src.testing.experiment_functions.mmd_test_functions import get_sub_paths, get_grouped_paths, generate_regime_path
 from src.utils.auxiliary_classes.RegimePartitioner import RegimePartitioner
+from src.utils.helper_functions.test_helper_functions import get_memberships
 
 
 def get_table_statistics(processor: Processor, models: List[Model],

@@ -170,13 +170,16 @@ class RegimePartitioner(object):
             dt = 1/self.year_mesh
             frac_t = np.diff(ind)[0]*dt
 
+            if i != 0:
+                frac_t += dt
+
             # Get starting path value
             # this_S0 = path[-1, 1:m_dim+1] if vol_inc else path[-1, 1:]
             this_S0 = path[-1, 1:]
 
             # Get model index
             index = i % n_models
-            tp = models[index].sim_path(T=frac_t, S0=this_S0, time_add=path[-1, 0])
+            tp    = models[index].sim_path(T=frac_t, S0=this_S0, time_add=path[-1, 0])
 
             path = np.concatenate(
                 [path, tp[1:]],

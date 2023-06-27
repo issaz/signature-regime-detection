@@ -42,6 +42,6 @@ class HierarchicalClusterer(object):
 
         # Obtain clusters
         clusters = AgglomerativeClustering(**kwargs).fit(self.distance_matrix)
-        labels = clusters.labels_
+        labels   = clusters.labels_
 
         return labels

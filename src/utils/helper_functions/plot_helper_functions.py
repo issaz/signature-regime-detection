@@ -30,53 +30,6 @@ def make_grid(axis=None):
     getattr(_plt_obj, "grid")(visible=True, which='minor', color='grey', linestyle=':', linewidth=1.0, alpha=0.1)
 
 
-def plot_histograms(model_data: list, plot_args: dict):
-    """
-
-    :param model_data:
-    :param plot_args:
-    :return:
-    """
-
-    dyadic_order = plot_args.get("dyadic_order")
-    sigma        = plot_args.get("sigma")
-    samples      = plot_args.get("samples")
-
-    bull_model, bear_model = model_data
-    bull_type, bull_params = bull_model
-    bear_type, bear_params = bear_model
-
-    colors = ['dodgerblue', 'tomato']
-    fp = get_project_root().as_posix() + '/data/histograms/{}_{}_{}_{}'.format(
-        bull_type,
-        '_'.join([str(p) for p in bull_params]),
-        bear_type,
-        '_'.join([str(p) for p in bear_params]),
-    )
-
-    plt.figure(figsize=(10*(1+np.sqrt(5))/2, 10))
-
-    for i, data in enumerate(model_data):
-        hist_data = np.load(
-            fp + '/h{}_dyadic_{}_sigma_{}_samples_{}.npy'.format(i, dyadic_order, sigma, samples),
-            allow_pickle=True
-        )
-
-        plt.hist(hist_data, bins=int(len(hist_data)/50), alpha=0.5, density=True, color=colors[i])
-
-    plt.title("Histograms, {}_{} vs {}_{}, do = {}, sigma = {}, samples = {}".format(
-        bull_type,
-        '_'.join([str(p) for p in bull_params]),
-        bear_type,
-        '_'.join([str(p) for p in bear_params]),
-        dyadic_order,
-        sigma,
-        samples
-    ))
-
-    plt.show()
-
-
 def plot_beliefs(processor: Processor, width=5, n_samples=64, reverse=False, transformed=False) -> None:
     """
     Plots a histogram corresponding to Processor scores
@@ -209,28 +162,4 @@ def plot_regime_change_path(path: np.ndarray, regime_changes: np.ndarray, log_re
         make_grid()
         plt.tight_layout()
 
-    plt.show()
-
-
-def plot_paths(*args, time_index=True, color="dodgerblue", alpha=0.6):
-    """
-    Plots collection of paths, assumed to be l x d with time index in first component
-
-    :param args:        l x d series of paths
-    :param time_index:  Whether paths have time index in first component or not
-    :param color:       Color of paths
-    :param alpha:       Alpha value of paths
-    :return:
-    """
-
-    plt.figure(figsize=golden_dimensions(10))
-    for arg in args:
-        l, d = arg.shape
-        index = arg[:, 0] if time_index else np.arange(0, len(arg))
-        for di in range(d):
-            plt.plot(index, arg[:, di + 1], color=color, alpha=alpha)
-
-    plt.grid(b=True, color='grey', linestyle=':', linewidth=1, alpha=0.3)
-    plt.minorticks_on()
-    plt.grid(b=True, which='minor', color='grey', linestyle=':', linewidth=1, alpha=0.1)
     plt.show()
