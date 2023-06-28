@@ -1,8 +1,17 @@
 # signature-regime-detection
 
-Code accompanying the paper "Pathwise methods for non-parametric online market regime detection and regime clustering for multidimensional and non-Markovian data", B. Horvath, Z. Issa, 2023. 
+Code accompanying the paper "Non-parametric online market regime detection and regime clustering for multidimensional and path-dependent data structures", B. Horvath, Z. Issa, 2023.
 
+Code used to run the experiments found in Section 4 onwards can be found in the <code>notebooks</code> folder. The repository is organized as follows:
 
-Code used to run the experiments found in Section 4 onwards can be found in the <code>notebooks</code> folder. 
+1) <code>data</code>: Folder for storage of pre-calculated data assets. These include simulated paths, MMD scores, and so on.
+2) <code>src</code>: Source code for the project. 
+3) <code>notebooks</code>: Step-by-step guides outlining each of the experiments shown in the paper. Includes:
+   1) <code>4-online-regime-detection.ipynb</code>: Subsections 4.1, 4.2, 4.3, 4.4 from the paper 
+   2) <code>4-higher-rank-mmd.ipynb</code>: Subsection 4.5
+   3) <code>4-detection-comparisons.ipynb</code>: Subsection 4.6
+   4) <code>4-non-markovian-detection.ipynb</code>: Subsection 4.7
+   5) <code>5-clustering-pathwise-regimes.ipynb</code>: Section 5
+   6) <code>6-real-data-experiments.ipynb</code>: Section 6
 
-In particular we direct the user to start at <code>4-online-regime-detection.ipynb</code>. Here, configuration variables are annotated.  
+Direct any questions to `zacharia.issa@kcl.ac.uk`.
