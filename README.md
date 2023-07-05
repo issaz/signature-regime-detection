@@ -15,3 +15,13 @@ Code used to run the experiments found in Section 4 onwards can be found in the 
    6) <code>6-real-data-experiments.ipynb</code>: Section 6
 
 Direct any questions to `zacharia.issa@kcl.ac.uk`.
+
+****
+
+All required packages can be found in <code>requirements.txt</code>. 
+
+Some users may have issues installing the <code>higherOrderKME</code> package, which is necessary to perform signature kernel MMD calculations. 
+
+This seems to be due to an issue with an older version of <code>h5py</code>. 
+
+If this is the case, we recommend manually installing <code>higherOrderKME</code>, removing the <code>h5py</code> requirement from <code>setup.py</code>.
